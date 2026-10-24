@@ -3,33 +3,45 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
-<title>Diamond Rush 3D</title>
+<title>Diamond Rush 3D — Fair Death</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%;overflow:hidden;background:#08080f;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff}
   canvas{display:block;width:100%;height:100%}
-  #hud{position:fixed;top:16px;left:16px;display:flex;gap:12px;pointer-events:none;z-index:10}
-  .stat{background:rgba(12,14,26,.72);border:1px solid rgba(120,160,255,.22);backdrop-filter:blur(8px);
-        padding:8px 14px;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:.4px;
-        display:flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
-  .stat .k{font-size:17px}
-  #toast{position:fixed;top:78px;left:50%;transform:translateX(-50%);background:rgba(20,60,40,.9);
+  #hud{position:fixed;top:14px;left:14px;display:flex;gap:10px;pointer-events:none;z-index:10;flex-wrap:wrap}
+  .stat{background:rgba(12,14,26,.74);border:1px solid rgba(120,160,255,.22);backdrop-filter:blur(8px);
+        padding:8px 13px;border-radius:11px;font-size:14px;font-weight:600;letter-spacing:.3px;
+        display:flex;align-items:center;gap:7px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+  .stat .k{font-size:16px}
+  #camBtn{position:fixed;top:14px;right:14px;z-index:11;background:rgba(12,14,26,.8);
+          border:1px solid rgba(120,160,255,.35);color:#cfe0ff;padding:10px 16px;border-radius:11px;
+          font-size:13px;font-weight:700;letter-spacing:.4px;cursor:pointer;backdrop-filter:blur(8px);
+          transition:all .15s}
+  #camBtn:hover{background:rgba(40,80,180,.5);border-color:#7ab0ff}
+  #camBtn:active{transform:scale(.95)}
+  #toast{position:fixed;top:74px;left:50%;transform:translateX(-50%);background:rgba(20,60,40,.92);
          border:1px solid rgba(80,255,160,.4);color:#9dffcf;padding:10px 20px;border-radius:10px;
          font-weight:700;font-size:14px;opacity:0;transition:opacity .35s;pointer-events:none;z-index:20}
   #toast.show{opacity:1}
+  #toast.bad{background:rgba(80,20,20,.95);border-color:rgba(255,80,80,.5);color:#ffb0b0}
   #overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
            gap:18px;background:radial-gradient(circle at 50% 40%,rgba(20,26,52,.92),rgba(4,4,10,.98));
-           z-index:30;opacity:0;pointer-events:none;transition:opacity .35s}
+           z-index:30;opacity:0;pointer-events:none;transition:opacity .35s;padding:24px}
   #overlay.show{opacity:1;pointer-events:auto}
-  #ovTitle{font-size:clamp(28px,6vw,54px);font-weight:800;letter-spacing:1px}
-  #ovText{font-size:16px;color:#a8b4d8;max-width:460px;text-align:center;line-height:1.6}
+  #ovTitle{font-size:clamp(26px,6vw,52px);font-weight:800;letter-spacing:1px;text-align:center}
+  #ovText{font-size:15px;color:#a8b4d8;max-width:480px;text-align:center;line-height:1.7}
+  #ovText b{color:#ff9a9a}
   #ovBtn{margin-top:8px;padding:14px 34px;border:0;border-radius:12px;cursor:pointer;
          font-size:16px;font-weight:800;letter-spacing:.6px;color:#04121a;
          background:linear-gradient(180deg,#7ef0ff,#2bb9e0);
          box-shadow:0 10px 28px rgba(60,200,255,.32);transition:transform .12s}
   #ovBtn:active{transform:scale(.96)}
-  #hint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);font-size:13px;color:#6f7b9e;
-        letter-spacing:.5px;pointer-events:none}
+  #hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);font-size:12px;color:#6f7b9e;
+        letter-spacing:.5px;pointer-events:none;text-align:center;padding:0 12px}
+  #deathMark{position:fixed;pointer-events:none;z-index:25;width:64px;height:64px;margin-left:-32px;margin-top:-32px;
+             border:3px solid #ff4040;border-radius:50%;opacity:0;transition:opacity .2s;
+             box-shadow:0 0 24px rgba(255,64,64,.7)}
+  #deathMark.show{opacity:1}
 </style>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -42,16 +54,18 @@
   <div class="stat"><span class="k">💎</span><span id="gems">0 / 0</span></div>
   <div class="stat"><span class="k">⏱</span><span id="time">0:00</span></div>
 </div>
+<button id="camBtn">📷 CAMERA: BEHIND</button>
 <div id="toast"></div>
+<div id="deathMark"></div>
 
 <div id="overlay" class="show">
   <h1 id="ovTitle">💎 DIAMOND RUSH 3D</h1>
-  <p id="ovText">Dig through the dirt, grab the diamonds, and reach the gate.<br>
-     Boulders roll and fall — don't get crushed. Snakes bite.<br>
-     Mystery boxes can save you… or kill you.</p>
+  <p id="ovText">Dig, dodge boulders, collect diamonds and reach the gate.<br>
+     <b>Snakes only kill on contact.</b> Boulders only kill when they land on you.<br>
+     Press <b>C</b> to switch camera modes.</p>
   <button id="ovBtn">START</button>
 </div>
-<div id="hint">WASD / Arrow keys to move · Swipe on mobile</div>
+<div id="hint">WASD / Arrows move · C = camera mode · touch swipe on mobile</div>
 
 <script type="module">
 import * as THREE from 'three';
@@ -60,18 +74,23 @@ import * as THREE from 'three';
    1. CONSTANTS
    ═══════════════════════════════════════════════════════════════ */
 const COLS = 22, ROWS = 14;
-const TICK = 1 / 10;                 // logic ticks per second  (10 Hz)
-const MOVE_TICKS = 1;                // player moves every tick
+const TICK = 1 / 10;
 
-const T = { EMPTY: 0, DIRT: 1, WALL: 2, EXIT: 3 };   // static tiles
+const T = { EMPTY: 0, DIRT: 1, WALL: 2, EXIT: 3 };
 const E = { PLAYER:'player', BOULDER:'boulder', DIAMOND:'diamond', SNAKE:'snake', BOX:'box' };
 
 const AXIS_X = new THREE.Vector3(1,0,0);
 const AXIS_Z = new THREE.Vector3(0,0,1);
 
+const CAM = [
+  { name:'BEHIND',    icon:'🎥' },
+  { name:'ISOMETRIC', icon:'📐' },
+  { name:'TOP-DOWN',  icon:'🔝' },
+];
+let camMode = 0;
+
 /* ═══════════════════════════════════════════════════════════════
-   2. LEVEL  (# wall, . dirt, ' ' empty, * diamond, O boulder,
-              S snake, ? mystery box, P player, E exit)
+   2. LEVEL
    ═══════════════════════════════════════════════════════════════ */
 const LEVEL = [
   '######################',
@@ -91,7 +110,7 @@ const LEVEL = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════
-   3. RENDERER / SCENE / CAMERA
+   3. RENDERER / SCENE
    ═══════════════════════════════════════════════════════════════ */
 const canvas   = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
@@ -100,17 +119,14 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x08080f);
-scene.fog = new THREE.Fog(0x08080f, 34, 62);
+scene.fog = new THREE.Fog(0x08080f, 30, 60);
 
-const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 200);
-const camBase = new THREE.Vector3(0, 19, 15.5);
-const camLook = new THREE.Vector3(0, 0, 0);
-camera.position.copy(camBase);
-camera.lookAt(camLook);
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(0, 14, 16);
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -118,11 +134,10 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 
-/* ── lights ─────────────────────────────────────────────────── */
-scene.add(new THREE.HemisphereLight(0x8fa8ff, 0x1a1008, 0.75));
+scene.add(new THREE.HemisphereLight(0x8fa8ff, 0x1a1008, 0.7));
 
-const sun = new THREE.DirectionalLight(0xfff2e0, 2.1);
-sun.position.set(9, 20, 11);
+const sun = new THREE.DirectionalLight(0xfff2e0, 2.2);
+sun.position.set(10, 22, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = -18; sun.shadow.camera.right = 18;
@@ -132,7 +147,7 @@ sun.shadow.bias = -0.0009;
 sun.shadow.normalBias = 0.02;
 scene.add(sun);
 
-const rim = new THREE.DirectionalLight(0x4488ff, 0.6);
+const rim = new THREE.DirectionalLight(0x4488ff, 0.7);
 rim.position.set(-10, 8, -12);
 scene.add(rim);
 
@@ -169,7 +184,6 @@ const M = {
   snake: new THREE.MeshStandardMaterial({ color:0x3fbf4a, emissive:0x0a2a0a, roughness:0.5 }),
   eye  : new THREE.MeshStandardMaterial({ color:0xffe23a, emissive:0xffaa00, emissiveIntensity:2.5 }),
   exitC: new THREE.MeshStandardMaterial({ color:0x662233, emissive:0xaa1133, emissiveIntensity:1.1, roughness:0.5 }),
-  exitO: new THREE.MeshStandardMaterial({ color:0x226644, emissive:0x22ff88, emissiveIntensity:2.0, roughness:0.35 }),
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -177,10 +191,13 @@ const M = {
    ═══════════════════════════════════════════════════════════════ */
 let grid, ents, dirtMeshes, entityList, levelGroup;
 let player, exitMesh, exitRing;
-let state = 'menu';           // menu | playing | dead | won
+let state = 'menu';
 let gems = 0, gemsRequired = 0, exitOpen = false;
 let tickCount = 0, elapsed = 0, logicAcc = 0;
 let screenShake = 0;
+let camCurrent = new THREE.Vector3(0, 14, 16);
+let camTarget  = new THREE.Vector3(0, 0, 0);
+let camTargetSmooth = new THREE.Vector3(0, 0, 0);
 
 const worldX = c => c - (COLS - 1) / 2;
 const worldZ = r => r - (ROWS - 1) / 2;
@@ -193,6 +210,7 @@ function makeBoulder() {
   m.position.y = 0.4;
   m.castShadow = true;
   m.receiveShadow = true;
+  m.userData.angVel = new THREE.Vector3(0,0,0);
   return m;
 }
 
@@ -209,14 +227,12 @@ function makeSnake() {
   const segs = [];
   for (let i = 0; i < 5; i++) {
     const s = new THREE.Mesh(G.seg, M.snake);
-    const rad = 0.17 - i * 0.014;
-    s.scale.setScalar(rad);
+    s.scale.setScalar(0.17 - i * 0.014);
     s.castShadow = true;
     g.add(s); segs.push(s);
   }
   const head = new THREE.Mesh(G.seg, M.snake);
-  head.scale.setScalar(0.21);
-  head.castShadow = true;
+  head.scale.setScalar(0.21); head.castShadow = true;
   g.add(head);
 
   const eL = new THREE.Mesh(G.seg, M.eye); eL.scale.setScalar(0.055);
@@ -232,17 +248,14 @@ function makeSnake() {
 function makeBox() {
   const g = new THREE.Group();
   const cube = new THREE.Mesh(G.box, M.box);
-  cube.position.y = 0.42;
-  cube.castShadow = true;
+  cube.position.y = 0.42; cube.castShadow = true;
   g.add(cube);
-
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(G.box),
     new THREE.LineBasicMaterial({ color: 0xfff0a0, transparent:true, opacity:0.9 })
   );
   edges.position.y = 0.42;
   g.add(edges);
-
   g.userData = { cube, edges };
   return g;
 }
@@ -259,46 +272,60 @@ function makePlayer() {
   const hat = new THREE.Mesh(G.hat, M.dark);
   hat.position.y = 1.15; hat.castShadow = true; g.add(hat);
 
-  const legL = new THREE.Mesh(G.leg, M.dark); legL.position.set(-0.10, 0.24, 0);
-  const legR = new THREE.Mesh(G.leg, M.dark); legR.position.set( 0.10, 0.24, 0);
-  legL.castShadow = legR.castShadow = true;
-  g.add(legL, legR);
+  const eyeMat = new THREE.MeshStandardMaterial({ color:0x111111, roughness:0.4 });
+  const eL = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), eyeMat);
+  const eR = eL.clone();
+  eL.position.set(-0.06, 1.02, -0.145);
+  eR.position.set( 0.06, 1.02, -0.145);
+  g.add(eL, eR);
 
-  const armL = new THREE.Mesh(G.arm, M.skin); armL.position.set(-0.26, 0.64, 0);
-  const armR = new THREE.Mesh(G.arm, M.skin); armR.position.set( 0.26, 0.64, 0);
-  armL.castShadow = armR.castShadow = true;
-  g.add(armL, armR);
+  function makeLeg(side) {
+    const hip = new THREE.Group();
+    hip.position.set(side * 0.10, 0.46, 0);
+    const leg = new THREE.Mesh(G.leg, M.dark);
+    leg.position.y = -0.22; leg.castShadow = true;
+    hip.add(leg);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.07, 0.20), M.dark);
+    foot.position.set(0, -0.42, -0.03); foot.castShadow = true;
+    hip.add(foot);
+    return hip;
+  }
+  const legL = makeLeg(-1), legR = makeLeg(1);
 
-  g.userData = { legL, legR, armL, armR, head, torso };
+  function makeArm(side) {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(side * 0.24, 0.82, 0);
+    const arm = new THREE.Mesh(G.arm, M.skin);
+    arm.position.y = -0.16; arm.castShadow = true;
+    shoulder.add(arm);
+    return shoulder;
+  }
+  const armL = makeArm(-1), armR = makeArm(1);
+
+  g.add(legL, legR, armL, armR);
+  g.userData = { legL, legR, armL, armR, head, torso, hat };
   return g;
 }
 
 function makeExit() {
   const g = new THREE.Group();
-
   const disc = new THREE.Mesh(G.disc, M.exitC.clone());
-  disc.position.y = 0.04;
-  disc.receiveShadow = true;
+  disc.position.y = 0.04; disc.receiveShadow = true;
   g.add(disc);
-
   const ring = new THREE.Mesh(G.ring, M.exitC.clone());
   ring.position.y = 0.55;
   ring.rotation.x = Math.PI / 2;
   ring.castShadow = true;
   g.add(ring);
-
   g.userData = { disc, ring };
   return g;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   7. LEVEL BUILD / RESET
+   7. LEVEL BUILD
    ═══════════════════════════════════════════════════════════════ */
 function buildLevel() {
-  if (levelGroup) {
-    scene.remove(levelGroup);
-    levelGroup.traverse(o => { if (o.geometry && o.geometry !== G.dirt) o.geometry?.dispose?.(); });
-  }
+  if (levelGroup) scene.remove(levelGroup);
   levelGroup = new THREE.Group();
   scene.add(levelGroup);
 
@@ -310,13 +337,12 @@ function buildLevel() {
   tickCount = 0; elapsed = 0; logicAcc = 0; screenShake = 0;
 
   let totalDiamonds = 0;
-  const pending = [];   // entities spawned after grid pass
+  const pending = [];
 
   for (let r = 0; r < ROWS; r++) {
     const row = (LEVEL[r] ?? '').padEnd(COLS, '#');
     for (let c = 0; c < COLS; c++) {
       const ch = row[c];
-
       if (ch === '#') { grid[r][c] = T.WALL; addWall(r, c); }
       else if (ch === '.') { grid[r][c] = T.DIRT; addDirt(r, c); }
       else if (ch === 'E') { grid[r][c] = T.EXIT; addExit(r, c); }
@@ -332,11 +358,11 @@ function buildLevel() {
   }
 
   gemsRequired = Math.max(1, Math.ceil(totalDiamonds * 0.5));
-
   for (const [type, r, c] of pending) addEntity(type, r, c);
   if (!player) addEntity(E.PLAYER, ROWS - 2, 1);
 
   updateHUD();
+  resetCamera();
 }
 
 function addWall(r, c) {
@@ -345,7 +371,6 @@ function addWall(r, c) {
   m.castShadow = true; m.receiveShadow = true;
   levelGroup.add(m);
 }
-
 function addDirt(r, c) {
   const m = new THREE.Mesh(G.dirt, M.dirt);
   m.position.set(worldX(c), -0.25, worldZ(r));
@@ -353,12 +378,10 @@ function addDirt(r, c) {
   levelGroup.add(m);
   dirtMeshes[r][c] = m;
 }
-
 function removeDirt(r, c) {
   const m = dirtMeshes[r][c];
   if (m) { levelGroup.remove(m); dirtMeshes[r][c] = null; }
 }
-
 function addExit(r, c) {
   exitMesh = makeExit();
   exitMesh.position.set(worldX(c), 0, worldZ(r));
@@ -397,12 +420,44 @@ function destroyEnt(e) {
   levelGroup.remove(e.mesh);
 }
 
-function moveEnt(e, nr, nc) {
-  const target = ents[nr][nc];
-  if (target && target !== e) {
-    if (target.type === E.PLAYER)      { killPlayer('You were crushed by a boulder'); return false; }
-    else if (target.type === E.SNAKE)  { destroyEnt(target); }
-    else return false;
+/* ═══════════════════════════════════════════════════════════════
+   9. RULES — FAIR COLLISION
+   ═══════════════════════════════════════════════════════════════
+   Design rules for fairness:
+     • Snakes kill ONLY when they share your cell.
+       - They kill when THEY move into your cell.
+       - They kill when YOU move into their cell.
+       - Being adjacent is never fatal.
+     • Boulders kill ONLY when they land on your cell.
+       - They never kill you from a distance.
+       - You can't walk into a boulder (it blocks you).
+     • Death is deferred to the next frame so the killer's
+       visual position matches its logical position.
+   ═══════════════════════════════════════════════════════════════ */
+
+// Boulders/diamonds treat a cell as free, blocking, or crushing.
+function cellState(r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return 'block';
+  if (grid[r][c] === T.WALL || grid[r][c] === T.DIRT) return 'block';
+  const e = ents[r][c];
+  if (!e) return 'free';
+  if (e.type === E.SNAKE || e.type === E.PLAYER) return 'crush';
+  return 'block';
+}
+
+// Attempt to move a faller into (nr, nc). Handles crushing fairly.
+function moveFaller(e, nr, nc) {
+  const occupant = ents[nr][nc];
+  if (occupant && occupant.type === E.PLAYER) {
+    // Kill on the SAME cell, using player's actual position.
+    killPlayer('Crushed by a falling boulder', occupant);
+    return false;
+  }
+  if (occupant && occupant.type === E.SNAKE) {
+    destroyEnt(occupant);
+  }
+  if (occupant && occupant.type !== E.PLAYER && occupant.type !== E.SNAKE) {
+    return false;   // blocked by another faller/box
   }
   ents[e.r][e.c] = null;
   e.r = nr; e.c = nc;
@@ -410,47 +465,130 @@ function moveEnt(e, nr, nc) {
   return true;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   9. RULES — movement, gravity, snakes, mystery box
-   ═══════════════════════════════════════════════════════════════ */
-function fallTarget(r, c) {
-  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return null;
-  if (grid[r][c] === T.WALL || grid[r][c] === T.DIRT) return null;
-  const e = ents[r][c];
-  if (!e) return 'free';
-  if (e.type === E.SNAKE || e.type === E.PLAYER) return 'crush';
-  return null;
+function updateGravity() {
+  for (let r = ROWS - 2; r >= 0; r--) {
+    for (let c = 0; c < COLS; c++) {
+      const e = ents[r][c];
+      if (!e || !e.alive) continue;
+      if (e.type !== E.BOULDER && e.type !== E.DIAMOND) continue;
+
+      // fall straight down
+      const below = cellState(r + 1, c);
+      if (below === 'free' || below === 'crush') {
+        const ok = moveFaller(e, r + 1, c);
+        if (state !== 'playing') return;
+        if (ok) continue;
+      }
+
+      // boulders roll off other fallers into a free cell
+      if (e.type === E.BOULDER) {
+        const under = ents[r + 1][c];
+        if (under && (under.type === E.BOULDER || under.type === E.DIAMOND)) {
+          for (const dc of [1, -1]) {
+            const nc = c + dc;
+            if (nc < 0 || nc >= COLS) continue;
+            if (cellState(r + 1, nc) === 'free' && cellState(r, nc) === 'free') {
+              ents[e.r][e.c] = null;
+              e.r = r; e.c = nc;
+              ents[r][nc] = e;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
+function updateSnakes() {
+  const list = entityList.filter(e => e.type === E.SNAKE && e.alive);
+  for (const s of list) {
+    if (state !== 'playing') return;
+
+    const options = [];
+    for (const [ddr, ddc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const nr = s.r + ddr, nc = s.c + ddc;
+      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+      if (grid[nr][nc] === T.WALL || grid[nr][nc] === T.DIRT) continue;
+      const t = ents[nr][nc];
+      if (t && t.type !== E.PLAYER) continue;
+      options.push({ ddr, ddc, nr, nc });
+    }
+    if (!options.length) continue;
+
+    // prefer stepping toward the player
+    options.sort((a, b) =>
+      (Math.abs(player.r - a.nr) + Math.abs(player.c - a.nc)) -
+      (Math.abs(player.r - b.nr) + Math.abs(player.c - b.nc))
+    );
+    const pick = Math.random() < 0.25
+      ? options[(Math.random() * options.length) | 0]
+      : options[0];
+
+    // Kill ONLY when the snake moves onto the player's cell.
+    const occupant = ents[pick.nr][pick.nc];
+    if (occupant && occupant.type === E.PLAYER) {
+      killPlayer('A snake bit you', occupant);
+      return;
+    }
+
+    ents[s.r][s.c] = null;
+    s.r = pick.nr; s.c = pick.nc;
+    ents[s.r][s.c] = s;
+    s.mesh.userData.dir.set(pick.ddc, 0, pick.ddr);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   10. PLAYER MOVE
+   ═══════════════════════════════════════════════════════════════ */
 function tryMovePlayer(dr, dc) {
+  if (state !== 'playing' || !player || !player.alive) return false;
   const nr = player.r + dr, nc = player.c + dc;
   if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return false;
   if (grid[nr][nc] === T.WALL) return false;
 
   const target = ents[nr][nc];
-  if (target) {
-    if (target.type === E.BOULDER) return false;               // can't push rocks
-    if (target.type === E.SNAKE)   { killPlayer('A snake bit you'); return true; }
-    if (target.type === E.DIAMOND) { collectGem(target); }
-    if (target.type === E.BOX)     { openBox(target); if (state !== 'playing') return true; }
+
+  // Boulder = wall
+  if (target && target.type === E.BOULDER) return false;
+
+  // Snake = death on contact (player walked into it)
+  if (target && target.type === E.SNAKE) {
+    killPlayer('You walked into a snake', target);
+    return true;
   }
 
-  // mystery box may have spawned something nasty
-  const after = ents[nr][nc];
-  if (after && after.type === E.SNAKE) { killPlayer('A snake bit you'); return true; }
+  // Diamond = collect
+  if (target && target.type === E.DIAMOND) collectGem(target);
 
-  // exit
+  // Box = open (may spawn something; re-check the cell after)
+  if (target && target.type === E.BOX) {
+    openBox(target);
+    if (state !== 'playing') return true;
+  }
+
+  // Re-check cell contents — a box may have spawned a snake/boulder there
+  const after = ents[nr][nc];
+  if (after && after.type === E.SNAKE) {
+    killPlayer('A snake spawned under you', after);
+    return true;
+  }
+  if (after && after.type === E.BOULDER) {
+    // boulder spawned from box — do not let player stand on it
+    return false;
+  }
+
+  // Exit
   if (grid[nr][nc] === T.EXIT && exitOpen) { winGame(); return true; }
 
-  // commit move
+  // Commit
   ents[player.r][player.c] = null;
   player.r = nr; player.c = nc;
   ents[nr][nc] = player;
 
-  // dig dirt
   if (grid[nr][nc] === T.DIRT) { grid[nr][nc] = T.EMPTY; removeDirt(nr, nc); }
-
-  player.phase += Math.PI; // step animation
+  player.face = { dr, dc };
   return true;
 }
 
@@ -476,7 +614,6 @@ function openBox(box) {
   const r = box.r, c = box.c;
   destroyEnt(box);
   screenShake = Math.max(screenShake, 0.2);
-
   const roll = Math.random();
   if (roll < 0.45)      { addEntity(E.DIAMOND, r, c); showToast('💎 A diamond!'); }
   else if (roll < 0.68) { addEntity(E.BOULDER, r, c); showToast('🪨 A boulder…'); }
@@ -484,86 +621,47 @@ function openBox(box) {
   else                  { showToast('✨ Empty…'); }
 }
 
-function updateGravity() {
-  for (let r = ROWS - 2; r >= 0; r--) {
-    for (let c = 0; c < COLS; c++) {
-      const e = ents[r][c];
-      if (!e || !e.alive) continue;
-      if (e.type !== E.BOULDER && e.type !== E.DIAMOND) continue;
-
-      // 1. fall straight down
-      const below = fallTarget(r + 1, c);
-      if (below) { moveEnt(e, r + 1, c); if (state !== 'playing') return; continue; }
-
-      // 2. roll off other rocks / gems (boulders only)
-      if (e.type === E.BOULDER) {
-        const under = ents[r + 1][c];
-        if (under && (under.type === E.BOULDER || under.type === E.DIAMOND)) {
-          for (const dc of [1, -1]) {
-            const nc = c + dc;
-            if (nc < 0 || nc >= COLS) continue;
-            if (fallTarget(r + 1, nc) === 'free' && fallTarget(r, nc) === 'free') {
-              moveEnt(e, r, nc);
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-function updateSnakes() {
-  const list = entityList.filter(e => e.type === E.SNAKE);
-  for (const s of list) {
-    if (!s.alive || state !== 'playing') continue;
-
-    const dr = player.r - s.r, dc = player.c - s.c;
-    if (Math.abs(dr) + Math.abs(dc) === 1) { killPlayer('A snake bit you'); return; }
-
-    const options = [];
-    for (const [ddr, ddc] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nr = s.r + ddr, nc = s.c + ddc;
-      if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
-      if (grid[nr][nc] === T.WALL || grid[nr][nc] === T.DIRT) continue;
-      const t = ents[nr][nc];
-      if (t && t.type !== E.PLAYER) continue;
-      options.push({ ddr, ddc, nr, nc });
-    }
-    if (!options.length) continue;
-
-    // bias toward the player, with 25% randomness
-    options.sort((a, b) =>
-      (Math.abs(player.r - a.nr) + Math.abs(player.c - a.nc)) -
-      (Math.abs(player.r - b.nr) + Math.abs(player.c - b.nc))
-    );
-    const pick = Math.random() < 0.25
-      ? options[(Math.random() * options.length) | 0]
-      : options[0];
-
-    if (ents[pick.nr][pick.nc]?.type === E.PLAYER) { killPlayer('A snake bit you'); return; }
-
-    ents[s.r][s.c] = null;
-    s.r = pick.nr; s.c = pick.nc;
-    ents[s.r][s.c] = s;
-    s.mesh.userData.dir.set(pick.ddc, 0, pick.ddr);
-  }
-}
-
 /* ═══════════════════════════════════════════════════════════════
-   10. GAME EVENTS
+   11. DEATH / WIN
    ═══════════════════════════════════════════════════════════════ */
-function killPlayer(reason) {
+function killPlayer(reason, killerEnt) {
   if (state !== 'playing') return;
   state = 'dead';
   screenShake = 0.6;
+
+  // freeze the killer's mesh position to its logical cell so
+  // the death marker and text match what the player SAW
+  if (killerEnt && killerEnt.mesh) {
+    killerEnt.mesh.position.x = worldX(killerEnt.c);
+    killerEnt.mesh.position.z = worldZ(killerEnt.r);
+  }
+
+  const gridInfo = killerEnt
+    ? `Grid cell (${killerEnt.r}, ${killerEnt.c})`
+    : 'location unknown';
+
   if (player) {
     ents[player.r][player.c] = null;
     player.alive = false;
-    // squash animation
     player.mesh.userData.dying = true;
   }
-  setTimeout(() => showOverlay('💀 YOU DIED', reason, 'TRY AGAIN'), 700);
+
+  // Flash a red ring at the killer's world position
+  if (killerEnt && killerEnt.mesh) {
+    flashDeathMark(killerEnt.mesh.position);
+  } else if (player) {
+    flashDeathMark(player.mesh.position);
+  }
+
+  showToast(`💀 ${reason}`, true);
+
+  setTimeout(() => {
+    showOverlay(
+      '💀 YOU DIED',
+      `<b>${reason}</b><br><span style="opacity:.75;font-size:13px">${gridInfo}</span>`,
+      'TRY AGAIN'
+    );
+  }, 800);
 }
 
 function winGame() {
@@ -574,7 +672,7 @@ function winGame() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   11. LOGIC TICK
+   12. LOGIC TICK
    ═══════════════════════════════════════════════════════════════ */
 const keys = {};
 
@@ -582,30 +680,29 @@ function tick() {
   if (state !== 'playing') return;
   tickCount++;
 
-  // --- player input -------------------------------------------------
   let dr = 0, dc = 0;
   if (keys['arrowup'] || keys['w'])         dr = -1;
   else if (keys['arrowdown'] || keys['s'])  dr = 1;
   else if (keys['arrowleft'] || keys['a'])  dc = -1;
   else if (keys['arrowright'] || keys['d']) dc = 1;
+
+  // Player acts first, then snakes, then gravity — this ordering
+  // means the player always has a chance to dodge.
   if (dr || dc) {
-    player.face = { dr, dc };
     tryMovePlayer(dr, dc);
     if (state !== 'playing') return;
   }
 
-  // --- snakes every 2nd tick ---------------------------------------
   if (tickCount % 2 === 0) {
     updateSnakes();
     if (state !== 'playing') return;
   }
 
-  // --- gravity ------------------------------------------------------
   updateGravity();
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   12. VISUAL UPDATE (smooth interpolation, 60 fps)
+   13. VISUAL UPDATE
    ═══════════════════════════════════════════════════════════════ */
 function updateVisuals(dt, t) {
   const k = 1 - Math.exp(-dt * 17);
@@ -614,40 +711,37 @@ function updateVisuals(dt, t) {
     if (!e.alive) continue;
     const m = e.mesh;
     const tx = worldX(e.c), tz = worldZ(e.r);
-
+    const prevX = m.position.x, prevZ = m.position.z;
     const dx = tx - m.position.x;
     const dz = tz - m.position.z;
     m.position.x += dx * k;
     m.position.z += dz * k;
+    const movedX = m.position.x - prevX;
+    const movedZ = m.position.z - prevZ;
 
-    /* ---- BOULDER: rolling rotation (radius-driven) ---- */
     if (e.type === E.BOULDER) {
       const R = 0.4;
-      if (Math.abs(dx) > 1e-4) m.rotateOnWorldAxis(AXIS_Z, -dx / R);
-      if (Math.abs(dz) > 1e-4) m.rotateOnWorldAxis(AXIS_X,  dz / R);
+      if (Math.abs(movedX) > 1e-5) m.rotateOnWorldAxis(AXIS_Z, -movedX / R);
+      if (Math.abs(movedZ) > 1e-5) m.rotateOnWorldAxis(AXIS_X,  movedZ / R);
+      const fallDist = Math.abs(movedZ) + Math.abs(movedX);
+      if (fallDist > 0.02) m.scale.y = 1 + Math.sin(t * 20) * 0.03;
+      else m.scale.y += (1 - m.scale.y) * (1 - Math.exp(-dt * 10));
     }
-
-    /* ---- DIAMOND: spin + bob + glow pulse ---- */
     else if (e.type === E.DIAMOND) {
       m.rotation.y += dt * 2.0;
       m.position.y = 0.45 + Math.sin(t * 2.4 + e.phase) * 0.07;
       m.scale.setScalar(1 + Math.sin(t * 3.5 + e.phase) * 0.045);
     }
-
-    /* ---- MYSTERY BOX: pulse + spin ---- */
     else if (e.type === E.BOX) {
       const u = m.userData;
       u.cube.rotation.y += dt * 1.6;
       u.edges.rotation.y = u.cube.rotation.y;
-      const p = 0.75 + Math.sin(t * 4.5) * 0.35;
-      u.cube.material.emissiveIntensity = p;
+      u.cube.material.emissiveIntensity = 0.75 + Math.sin(t * 4.5) * 0.35;
       u.cube.scale.setScalar(1 + Math.sin(t * 4.5) * 0.06);
       u.cube.position.y = 0.42 + Math.sin(t * 2.6) * 0.05;
       u.edges.position.y = u.cube.position.y;
       u.edges.scale.copy(u.cube.scale);
     }
-
-    /* ---- SNAKE: body undulation along facing dir ---- */
     else if (e.type === E.SNAKE) {
       const u = m.userData;
       const dir = u.dir;
@@ -664,19 +758,14 @@ function updateVisuals(dt, t) {
         );
       }
     }
-
-    /* ---- PLAYER: walk cycle, facing, death squash ---- */
     else if (e.type === E.PLAYER) {
       const u = m.userData;
-
       if (u.dying) {
         m.scale.y += (0.12 - m.scale.y) * (1 - Math.exp(-dt * 9));
         m.scale.x += (1.35 - m.scale.x) * (1 - Math.exp(-dt * 9));
         m.scale.z += (1.35 - m.scale.z) * (1 - Math.exp(-dt * 9));
         continue;
       }
-
-      // facing
       if (e.face) {
         const ang = Math.atan2(e.face.dc, e.face.dr * -1);
         let diff = ang - m.rotation.y;
@@ -684,56 +773,101 @@ function updateVisuals(dt, t) {
         while (diff < -Math.PI) diff += Math.PI * 2;
         m.rotation.y += diff * (1 - Math.exp(-dt * 14));
       }
-
-      // walk cycle driven by actual movement speed
-      const speed = Math.hypot(dx, dz);
-      e.walkPhase = (e.walkPhase || 0) + speed * 14;
-      const swing = Math.sin(e.walkPhase) * 0.7;
+      const speed = Math.hypot(movedX, movedZ);
+      e.walkPhase = (e.walkPhase || 0) + speed * 16;
+      const swing = Math.sin(e.walkPhase) * 0.75;
       u.legL.rotation.x =  swing;
       u.legR.rotation.x = -swing;
       u.armL.rotation.x = -swing * 0.8;
       u.armR.rotation.x =  swing * 0.8;
-      u.torso.position.y = 0.62 + Math.abs(Math.sin(e.walkPhase)) * 0.035;
-      u.head.position.y  = 1.00 + Math.abs(Math.sin(e.walkPhase)) * 0.035;
+      const bob = Math.abs(Math.sin(e.walkPhase)) * 0.04;
+      u.torso.position.y = 0.62 + bob;
+      u.head.position.y  = 1.00 + bob;
+      u.hat.position.y   = 1.15 + bob;
     }
   }
 
-  /* ---- EXIT: ring spin + pulse ---- */
   if (exitRing) {
     exitRing.rotation.z += dt * (exitOpen ? 3.2 : 0.7);
-    const s = 1 + Math.sin(t * (exitOpen ? 5 : 2)) * 0.07;
-    exitRing.scale.setScalar(s);
+    exitRing.scale.setScalar(1 + Math.sin(t * (exitOpen ? 5 : 2)) * 0.07);
     if (exitMesh) exitMesh.userData.disc.material.emissiveIntensity =
       (exitOpen ? 2.2 : 1.0) + Math.sin(t * 4) * 0.5;
   }
 
-  /* ---- CAMERA: gentle follow + shake ---- */
-  const focusX = player ? player.mesh.position.x * 0.32 : 0;
-  const focusZ = player ? player.mesh.position.z * 0.32 : 0;
+  updateCamera(dt);
+}
 
-  camera.position.x += (camBase.x + focusX - camera.position.x) * (1 - Math.exp(-dt * 3));
-  camera.position.z += (camBase.z + focusZ - camera.position.z) * (1 - Math.exp(-dt * 3));
-  camera.position.y = camBase.y;
+/* ═══════════════════════════════════════════════════════════════
+   14. CAMERA MODES
+   ═══════════════════════════════════════════════════════════════ */
+function resetCamera() {
+  const p = player ? { x: player.mesh.position.x, z: player.mesh.position.z } : { x: 0, z: 0 };
+  camTarget.set(p.x, 0, p.z);
+  camTargetSmooth.copy(camTarget);
+  camCurrent.copy(desiredCamPos());
+  camera.position.copy(camCurrent);
+  camera.lookAt(camTarget);
+}
+
+function desiredCamPos() {
+  if (!player) return new THREE.Vector3(0, 14, 16);
+  const px = player.mesh.position.x;
+  const pz = player.mesh.position.z;
+  const rotY = player.mesh.rotation.y;
+
+  if (camMode === 0) {
+    const dist = 6.2, height = 3.0;
+    const fx = -Math.sin(rotY);
+    const fz = -Math.cos(rotY);
+    return new THREE.Vector3(px - fx * dist, height, pz - fz * dist);
+  }
+  if (camMode === 1) return new THREE.Vector3(px + 9, 13, pz + 11);
+  return new THREE.Vector3(px, 19, pz + 0.01);
+}
+
+function updateCamera(dt) {
+  if (!player) return;
+  const px = player.mesh.position.x;
+  const pz = player.mesh.position.z;
+
+  if (camMode === 0) {
+    const fx = -Math.sin(player.mesh.rotation.y);
+    const fz = -Math.cos(player.mesh.rotation.y);
+    camTarget.set(px + fx * 1.4, 0.7, pz + fz * 1.4);
+  } else {
+    camTarget.set(px, 0, pz);
+  }
+
+  const kFollow = 1 - Math.exp(-dt * (camMode === 0 ? 4.2 : 3.2));
+  camTargetSmooth.lerp(camTarget, kFollow);
+
+  const targetPos = desiredCamPos();
+  camCurrent.lerp(targetPos, 1 - Math.exp(-dt * (camMode === 0 ? 3.8 : 2.8)));
+  camera.position.copy(camCurrent);
 
   if (screenShake > 0.001) {
     screenShake *= Math.exp(-dt * 7);
     camera.position.x += (Math.random() - 0.5) * screenShake;
     camera.position.y += (Math.random() - 0.5) * screenShake;
   }
-  camLook.x += (focusX * 0.55 - camLook.x) * (1 - Math.exp(-dt * 3));
-  camLook.z += (focusZ * 0.55 - camLook.z) * (1 - Math.exp(-dt * 3));
-  camera.lookAt(camLook);
+
+  camera.lookAt(camTargetSmooth);
+}
+
+function cycleCamera() {
+  camMode = (camMode + 1) % CAM.length;
+  document.getElementById('camBtn').textContent = `${CAM[camMode].icon} CAMERA: ${CAM[camMode].name}`;
+  showToast(`Camera: ${CAM[camMode].name}`);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   13. MAIN LOOP
+   15. MAIN LOOP
    ═══════════════════════════════════════════════════════════════ */
 let lastTime = performance.now();
 let clock = 0;
 
 function loop(now) {
   requestAnimationFrame(loop);
-
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
   clock += dt;
@@ -755,7 +889,7 @@ function loop(now) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   14. HUD / OVERLAY / INPUT
+   16. HUD / OVERLAY / INPUT
    ═══════════════════════════════════════════════════════════════ */
 const elGems  = document.getElementById('gems');
 const elTime  = document.getElementById('time');
@@ -764,50 +898,64 @@ const overlay = document.getElementById('overlay');
 const ovTitle = document.getElementById('ovTitle');
 const ovText  = document.getElementById('ovText');
 const ovBtn   = document.getElementById('ovBtn');
+const camBtn  = document.getElementById('camBtn');
+const deathMark = document.getElementById('deathMark');
 
 let toastTimer = null;
-function showToast(msg) {
+function showToast(msg, bad=false) {
   elToast.textContent = msg;
+  elToast.classList.toggle('bad', bad);
   elToast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => elToast.classList.remove('show'), 1800);
+  toastTimer = setTimeout(() => elToast.classList.remove('show'), 2000);
 }
 
-function updateHUD() {
-  elGems.textContent = `${gems} / ${gemsRequired}`;
+// Project a world position onto screen and flash a red ring there.
+function flashDeathMark(worldPos) {
+  const v = worldPos.clone();
+  v.y = 0.4;
+  v.project(camera);
+  if (v.z > 1) return; // behind camera
+  const x = (v.x * 0.5 + 0.5) * innerWidth;
+  const y = (-v.y * 0.5 + 0.5) * innerHeight;
+  deathMark.style.left = x + 'px';
+  deathMark.style.top  = y + 'px';
+  deathMark.classList.add('show');
+  setTimeout(() => deathMark.classList.remove('show'), 1400);
 }
+
+function updateHUD() { elGems.textContent = `${gems} / ${gemsRequired}`; }
 function updateTimer() {
   const s = Math.floor(elapsed);
   elTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
-
 function showOverlay(title, text, btn) {
   ovTitle.textContent = title;
   ovText.innerHTML = text;
   ovBtn.textContent = btn;
   overlay.classList.add('show');
 }
-
 function startGame() {
   overlay.classList.remove('show');
+  deathMark.classList.remove('show');
   buildLevel();
   state = 'playing';
   lastTime = performance.now();
 }
 
 ovBtn.addEventListener('click', startGame);
+camBtn.addEventListener('click', cycleCamera);
 
-/* ---- keyboard ---- */
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   keys[k] = true;
   if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  if (k === 'c') cycleCamera();
   if (k === 'r' && state !== 'playing') startGame();
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-/* ---- touch swipe ---- */
 let touchStart = null;
 canvas.addEventListener('touchstart', e => {
   touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -819,21 +967,18 @@ canvas.addEventListener('touchend', e => {
   const dx = t.clientX - touchStart.x;
   const dy = t.clientY - touchStart.y;
   if (Math.hypot(dx, dy) < 24) { touchStart = null; return; }
-
-  // tap = one-step move; we simulate a quick key press
   const key = Math.abs(dx) > Math.abs(dy)
     ? (dx > 0 ? 'arrowright' : 'arrowleft')
     : (dy > 0 ? 'arrowdown'  : 'arrowup');
-
   keys[key] = true;
   setTimeout(() => { keys[key] = false; }, 130);
   touchStart = null;
 }, { passive: true });
 
 /* ═══════════════════════════════════════════════════════════════
-   15. BOOT
+   17. BOOT
    ═══════════════════════════════════════════════════════════════ */
-buildLevel();          // build behind the menu so it looks alive
+buildLevel();
 state = 'menu';
 requestAnimationFrame(loop);
 </script>
